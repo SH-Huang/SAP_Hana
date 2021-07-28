@@ -1,0 +1,99 @@
+'''
+Using SAP HANA Cloud and Jupyter for Data Matching
+Approach 2: Record Linkage
+'''
+
+### Step 1:  installed packages ###
+'''
+for SAP Cloud Environment 
+if SAP database linkage and machine learning client for SAP HANA are not installed. 
+if fuzzy matcher package is not installed. 
+'''
+!pip install hdbcli  
+!pip install hana-ml
+!pip install recordlinkage
+
+
+### Step 2:  import pacakges  ####
+#for SAP Cloud Environment linkage
+import hdbcli
+import hana_ml
+from hana_ml import dataframe
+from hana_ml.dataframe import ConnectionContext
+
+# Data manipulate
+import pandas as pd
+
+# for fuzzy match
+import fuzzymatcher
+
+
+### Step 3: Build a DB Connection and select data using standard SQL.  ###
+conn = dataframe.ConnectionContext(address='...', port='....', user='...', password='...', encrypt='true', sslValidateCertificate='false')
+mydf1=conn.sql('select * from NAMES.INDIV_MASTER')
+mydf2=conn.sql('select * from NAMES.INDIV_CHECK')
+
+
+### Step 4: Move the data to Pandas dataframes ###
+pandas_dfmas = mydf1.collect()
+pandas_dfcheck = mydf2.collect()
+
+# check dataset to ensure correct datatype for each column
+pandas_dfmas.info()
+pandas_dfcheck.info()
+
+
+### Step 5: Reset index and create an indexer object ###
+# Reset index
+pandas_dfmas = pandas_dfmas.set_index('INDIV_ID')
+pandas_dfcheck = pandas_dfcheck.set_index('ID_Num')
+
+# create indexer
+indexer = recordlinkage.Index()
+
+
+### Step 6: Choose the primary columns for indexing. ###
+''' Use sortedneighbor when the data is not consistent. ''' 
+indexer.sortedneighbourhood(left_on='STATE', right_on='STATE')
+
+
+### Step 7. Compare selected columns from both datasets and calculate matching scores ###
+# indexing items in dataset
+candidates = indexer.index(pandas_dfmas, pandas_dfcheck)
+
+# create an object for record linkages
+compare = recordlinkage.Compare()
+
+'''
+# choose columns for matching  
+label: use a tag you like to name a column
+method: choose a method, the options: jarowinkler, damerau_levenshtein, levenshtein
+threshold => depends on the data quality, ideal range 0.8 ~ 0.85
+'''
+compare.exact('State', 'State', label='State')
+compare.string('First_Name', 'First_Name', 'threshold=0.85, label='Name') 
+compare.string('SURNAME','SURNAME', method='jarowinkler', threshold=0.85, label='Surname')
+
+# calcuate score of matching results
+features = compare.compute(candidates, pandas_dfmas, pandas_dfcheck)
+
+
+### Step 8. List matching results or observe a specific outcome ###
+''' 
+sorting the result
+filter results with score more than 2 
+filter threshold depends on your need
+'''
+
+features.sum(axis=1).value_counts().sort_index(ascending=False)
+potential_duplication = features[features.sum(axis=1) > 2].reset_index()
+
+# list chosen items
+potential_duplication['Score'] = potential_ duplication.loc[:, 'First_Name': 'SURNAME'].sum(axis=1)
+potential_duplication.sort_values(by=['Score'], ascending=True)
+
+# check a specific item
+potential_duplication[potential_duplication.index.isin([index1, index2])] # enter index number you wish to see the details. 
+
+
+

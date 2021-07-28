@@ -1,0 +1,88 @@
+'''
+ Using SAP HANA Cloud and Jupyter for Data Matching 
+ Approach 1: fuzzy-matcher 
+'''
+
+### Step 1:  installed packages ####
+'''
+# for SAP Cloud Environment 
+# if SAP database linkage and machine learning client for SAP HANA are not installed. 
+# if fuzzy matcher package is not installed. 
+'''
+
+!pip install hdbcli  
+!pip install hana-ml
+!pip install fuzzymatcher
+!pip install recordlinkage
+
+### Step 2:  import pacakges  ###
+# for SAP Cloud Environment linkage
+import hdbcli
+import hana_ml
+from hana_ml import dataframe
+from hana_ml.dataframe import ConnectionContext
+
+# Data manipulate
+import pandas as pd
+
+# for fuzzy match
+import fuzzymatcher
+
+### Step 3: Build a DB Connection and select data using standard SQL  ###
+conn = dataframe.ConnectionContext(address='...', port='....', user='...', password='...', encrypt='true', sslValidateCertificate='false')
+mydf1=conn.sql('select * from NAMES.INDIVIDUALS')
+mydf2=conn.sql('select * from NAMES.INDIVIDUALS_2 ORDER BY ID LIMIT 10')
+
+### Step 4: Move the data to Pandas dataframes ###
+pandas_df1 = mydf1.collect()
+pandas_df2 = mydf2.collect()
+
+# check dataset to ensure correct datatype for each column
+pandas_df1.info()
+pandas_df2.info()
+
+
+### Step 5: Choose the columns to match on ###
+
+# Columns to match on from pandas_df1 (left)
+left_on = ["First_Name","Surname", "Address", "City", "State"]
+
+# Columns to match on from pandas_df2 (right)
+right_on = ["First_Name","Surname", "Address", "City", "State"]
+
+
+### Step 6: get a matching result ###
+''' 
+use fuzzymatcher object
+choose matching columns
+It may take several minutes to run on the datasets
+'''
+matched_results = fuzzymatcher.fuzzy_left_join(hospital_accounts,
+                                               hospital_reimbursement,
+                                               left_on,
+                                               right_on,
+                                               left_id_col='Account_Num',
+                                               right_id_col='Provider_Num')
+
+matched_results.head()
+
+
+### Step 7. Observe matching scores from various perspectives###
+
+# the best matches
+matched_results[cols].sort_values(by=['best_match_score'], ascending=False).head(5)
+
+# the worst matches
+matched_results[cols].sort_values(by=['best_match_score'], ascending=True).head(5)
+
+# the matches around 1
+matched_results[cols].query("best_match_score <= 1").sort_values(by=['best_match_score'], ascending=False).head(10)
+
+# the matches around .80
+matched_results[cols].query("best_match_score <= .80").sort_values(by=['best_match_score'], ascending=False).head(5)
+
+
+
+
+
+

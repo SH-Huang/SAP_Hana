@@ -1,5 +1,5 @@
 '''
- Using SAP HANA Cloud and Jupyter for Data Matching 
+ Blog 1: Using SAP HANA Cloud and Jupyter for Data Matching 
  Approach 1: fuzzy-matcher 
 '''
 

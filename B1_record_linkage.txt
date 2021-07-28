@@ -92,8 +92,8 @@ potential_duplication = features[features.sum(axis=1) > 2].reset_index()
 potential_duplication['Score'] = potential_ duplication.loc[:, 'First_Name': 'SURNAME'].sum(axis=1)
 potential_duplication.sort_values(by=['Score'], ascending=True)
 
-# check a specific item
-potential_duplication[potential_duplication.index.isin([index1, index2])] # enter index number you wish to see the details. 
+# check a specific item which you wish to see.
+potential_duplication[potential_duplication.index.isin([index1, index2])]
 
 
 
